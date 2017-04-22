@@ -5,6 +5,8 @@ from torch.nn import Module, Parameter
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+from functions import clip_gradient
+
 
 class RNNCell(Module):
     def __init__(self, input_size, hidden_size):
@@ -26,6 +28,7 @@ class RNNCell(Module):
 
     def forward(self, input, h):
         output = F.linear(input, self.weight_ih, self.bias_ih) + F.linear(h, self.weight_hh, self.bias_hh)
+        output = clip_gradient(output, -1, 1) # avoid explosive gradient
         output = F.relu(output)
 
         return output

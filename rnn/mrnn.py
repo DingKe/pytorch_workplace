@@ -6,7 +6,6 @@ from torch.autograd import Variable
 
 from modules import MultiRNN
 
-
 # Hyper Parameters
 sequence_length = 28
 input_size = 28
