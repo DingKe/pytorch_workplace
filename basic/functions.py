@@ -10,7 +10,7 @@ class ReLUF(Function):
     def forward(self, input):
         self.save_for_backward(input)
 
-        output = torch.max(input, torch.zeros(input.size()))
+        output = input.clamp(min=0)
 
         return output
 
