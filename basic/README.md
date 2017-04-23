@@ -1,4 +1,4 @@
-Try to define new functions and modules
+Try to define new pytorch functions and modules
 
 * functions.py - where new functions defined
 * modules.py - where new modules defined
