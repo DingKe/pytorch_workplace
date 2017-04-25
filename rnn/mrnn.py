@@ -37,13 +37,13 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 
 # RNN Model (Many-to-One)
 class RNNModel(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, bias=True):
         super(RNNModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.rnn = MultiRNN(input_size, hidden_size, num_layers, return_sequences=False)
-        self.fc = nn.Linear(hidden_size, num_classes)
+        self.rnn = MultiRNN(input_size, hidden_size, num_layers, bias=bias, return_sequences=False)
+        self.fc = nn.Linear(hidden_size, num_classes, bias=bias)
     
     def forward(self, x):
         # Set initial states 
@@ -56,7 +56,7 @@ class RNNModel(nn.Module):
         out = self.fc(out)  
         return out
 
-rnn = RNNModel(input_size, hidden_size, num_layers, num_classes)
+rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True)
 
 
 # Loss and Optimizer

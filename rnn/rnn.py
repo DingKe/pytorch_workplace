@@ -7,6 +7,9 @@ from torch.autograd import Variable
 from modules import RNN
 
 
+torch.manual_seed(1111)
+
+
 # Hyper Parameters
 sequence_length = 28
 input_size = 28
@@ -37,12 +40,12 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 
 # RNN Model (Many-to-One)
 class RNNModel(nn.Module):
-    def __init__(self, input_size, hidden_size, num_classes):
+    def __init__(self, input_size, hidden_size, num_classes, bias=True):
         super(RNNModel, self).__init__()
         self.hidden_size = hidden_size
 
-        self.rnn = RNN(input_size, hidden_size, return_sequences=False)
-        self.fc = nn.Linear(hidden_size, num_classes)
+        self.rnn = RNN(input_size, hidden_size, bias=bias, return_sequences=False)
+        self.fc = nn.Linear(hidden_size, num_classes, bias=bias)
     
     def forward(self, x):
         # Set initial states 
@@ -55,7 +58,7 @@ class RNNModel(nn.Module):
         out = self.fc(out)  
         return out
 
-rnn = RNNModel(input_size, hidden_size, num_classes)
+rnn = RNNModel(input_size, hidden_size, num_classes, bias=True)
 
 
 # Loss and Optimizer

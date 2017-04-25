@@ -9,15 +9,17 @@ from functions import clip_gradient
 
 
 class RNNCell(Module):
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, bias=True):
         super(RNNCell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
 
         self.weight_ih = Parameter(torch.Tensor(hidden_size, input_size))
         self.weight_hh = Parameter(torch.Tensor(hidden_size, hidden_size))
-        self.bias_ih = Parameter(torch.Tensor(hidden_size))
-        self.bias_hh = Parameter(torch.Tensor(hidden_size))
+        if bias:
+            self.bias = Parameter(torch.Tensor(hidden_size))
+        else:
+            self.register_parameter('bias', None)
 
         self.reset_parameters()
 
@@ -27,7 +29,7 @@ class RNNCell(Module):
             weight.data.uniform_(-stdv, stdv)
 
     def forward(self, input, h):
-        output = F.linear(input, self.weight_ih, self.bias_ih) + F.linear(h, self.weight_hh, self.bias_hh)
+        output = F.linear(input, self.weight_ih, self.bias) + F.linear(h, self.weight_hh)
         output = clip_gradient(output, -1, 1) # avoid explosive gradient
         output = F.relu(output)
 
@@ -35,13 +37,14 @@ class RNNCell(Module):
 
 
 class RNN(Module):
-    def __init__(self, input_size, hidden_size, return_sequences=True):
+    def __init__(self, input_size, hidden_size, bias=True, return_sequences=True):
         super(RNN, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.bias = bias 
         self.return_sequences = return_sequences
 
-        self.cell = RNNCell(input_size, hidden_size)
+        self.cell = RNNCell(input_size, hidden_size, bias)
 
     def forward(self, input, initial_state=None):
         if initial_state is None:
@@ -56,7 +59,7 @@ class RNN(Module):
             outputs.append(state)
 
         if self.return_sequences:
-            output = torch.stack(outputs)
+            output = torch.stack(outputs).transpose(0, 1)
         else:
             output = outputs[-1]
         return output
@@ -65,16 +68,17 @@ class RNN(Module):
 class MultiRNN(Module):
     '''Multiple layer RNN
     '''
-    def __init__(self, input_size, hidden_size, num_layers=1, return_sequences=True):
+    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, return_sequences=True):
         super(MultiRNN, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.bias = bias
         self.return_sequences = return_sequences
 
-        self.cell0= RNNCell(input_size, hidden_size)
+        self.cell0= RNNCell(input_size, hidden_size, bias)
         for i in range(1, num_layers):
-            cell = RNNCell(hidden_size, hidden_size)
+            cell = RNNCell(hidden_size, hidden_size, bias)
             setattr(self, 'cell{}'.format(i), cell)
 
     def forward(self, input, initial_states=None):
@@ -96,7 +100,7 @@ class MultiRNN(Module):
             outputs.append(x)
 
         if self.return_sequences:
-            output = torch.stack(outputs)
+            output = torch.stack(outputs).transpose(0, 1)
         else:
             output = outputs[-1]
         return output
