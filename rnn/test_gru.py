@@ -4,7 +4,10 @@ import torchvision.datasets as dsets
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 
-from modules import MultiRNN
+from modules import GRU
+
+
+torch.manual_seed(1111)
 
 # Hyper Parameters
 sequence_length = 28
@@ -37,12 +40,12 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 
 # RNN Model (Many-to-One)
 class RNNModel(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes, bias=True):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=None):
         super(RNNModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.rnn = MultiRNN(input_size, hidden_size, num_layers, bias=bias, return_sequences=False)
+        self.rnn = GRU(input_size, hidden_size, num_layers, bias=bias, return_sequences=False, grad_clip=grad_clip)
         self.fc = nn.Linear(hidden_size, num_classes, bias=bias)
     
     def forward(self, x):
@@ -56,7 +59,7 @@ class RNNModel(nn.Module):
         out = self.fc(out)  
         return out
 
-rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True)
+rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=1)
 
 
 # Loss and Optimizer

@@ -4,16 +4,16 @@ import torchvision.datasets as dsets
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 
-from modules import RNN
+from modules import LSTM
 
 
 torch.manual_seed(1111)
-
 
 # Hyper Parameters
 sequence_length = 28
 input_size = 28
 hidden_size = 128
+num_layers = 2
 num_classes = 10
 batch_size = 100
 num_epochs = 2
@@ -40,25 +40,27 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 
 # RNN Model (Many-to-One)
 class RNNModel(nn.Module):
-    def __init__(self, input_size, hidden_size, num_classes, bias=True):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=None):
         super(RNNModel, self).__init__()
         self.hidden_size = hidden_size
+        self.num_layers = num_layers
 
-        self.rnn = RNN(input_size, hidden_size, bias=bias, return_sequences=False)
+        self.rnn = LSTM(input_size, hidden_size, num_layers, bias=bias, return_sequences=False, grad_clip=None)
         self.fc = nn.Linear(hidden_size, num_classes, bias=bias)
     
     def forward(self, x):
         # Set initial states 
-        initial_state = Variable(torch.zeros(x.size(0), self.hidden_size)) 
+        zeros = Variable(torch.zeros(x.size(0), self.hidden_size))
+        initial_states = [(zeros, zeros)] * self.num_layers
         
         # Forward propagate RNN
-        out = self.rnn(x, initial_state)  
+        out = self.rnn(x, initial_states)  
         
         # Decode hidden state of last time step
         out = self.fc(out)  
         return out
 
-rnn = RNNModel(input_size, hidden_size, num_classes, bias=True)
+rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=1)
 
 
 # Loss and Optimizer

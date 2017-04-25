@@ -3,21 +3,21 @@ from torch.autograd import Function
 
 
 class ClipGradientF(Function):
-    def __init__(self, min_val, max_val):
+    def __init__(self, min, max):
         super(ClipGradientF, self).__init__()
 
-        self.min_val = min_val
-        self.max_val = max_val
+        self.min = min
+        self.max = max
     
     def forward(self, input):
         output = input.clone()
         return output 
 
     def backward(self, grad_output):
-        grad_input = grad_output.clamp(self.min_val, self.max_val)
+        grad_input = grad_output.clamp(self.min, self.max)
         return grad_input
         
 # function interfaces
-def clip_gradient(x, min_val, max_val):
-    clip = ClipGradientF(min_val, max_val)
+def clip_grad(x, min, max):
+    clip = ClipGradientF(min, max)
     return clip(x)
