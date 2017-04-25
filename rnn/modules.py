@@ -5,7 +5,10 @@ from torch.nn import Module, Parameter
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from functions import clip_grad
+
+def clip_grad(v, min, max):
+    v.register_hook(lambda g: g.clamp(min, max))
+    return v
 
 
 class RNNCellBase(Module):
@@ -43,7 +46,8 @@ class RNNCell(RNNCellBase):
 
     def forward(self, input, h):
         output = F.linear(input, self.weight_ih, self.bias) + F.linear(h, self.weight_hh)
-        output = clip_grad(output, -self.grad_clip, self.grad_clip) # avoid explosive gradient
+        if self.grad_clip:
+            output = clip_grad(output, -self.grad_clip, self.grad_clip) # avoid explosive gradient
         output = F.relu(output)
 
         return output
@@ -172,139 +176,12 @@ class LSTMPCell(RNNCellBase):
         return h, c
 
 
-class RNN(Module):
+class RNNBase(Module):
 
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, 
+    def __init__(self, mode, input_size, hidden_size, recurrent_size=None, num_layers=1, bias=True, 
                  return_sequences=True, grad_clip=None):
-        super(RNN, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.bias = bias
-        self.return_sequences = return_sequences
-        self.grad_clip = grad_clip
-
-        self.cell0= RNNCell(input_size, hidden_size, bias, grad_clip=grad_clip)
-        for i in range(1, num_layers):
-            cell = RNNCell(hidden_size, hidden_size, bias, grad_clip=grad_clip)
-            setattr(self, 'cell{}'.format(i), cell)
-
-    def forward(self, input, initial_states=None):
-        if initial_states is None:
-            zeros = Variable(torch.zeros(input.size(0), self.hidden_size))
-            initial_states = [zeros] * self.num_layers
-        if type(initial_states) not in [list, tuple]:
-            initial_states = [initial_states] * self.num_layers
-        assert len(initial_states) == self.num_layers
-
-        states = initial_states
-        outputs = []
-
-        time_steps = input.size(1)
-        for t in range(time_steps):
-            x = input[:, t, :]
-            for l in range(self.num_layers):
-                x = getattr(self, 'cell{}'.format(l))(x, states[l])
-                states[l] = x
-            outputs.append(x)
-
-        if self.return_sequences:
-            output = torch.stack(outputs).transpose(0, 1)
-        else:
-            output = outputs[-1]
-        return output
-
-
-class GRU(Module):
-
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, 
-                 return_sequences=True, grad_clip=None):
-        super(GRU, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.bias = bias
-        self.return_sequences = return_sequences
-        self.grad_clip = grad_clip
-
-        self.cell0= GRUCell(input_size, hidden_size, bias, grad_clip=grad_clip)
-        for i in range(1, num_layers):
-            cell = GRUCell(hidden_size, hidden_size, bias, grad_clip=grad_clip)
-            setattr(self, 'cell{}'.format(i), cell)
-
-    def forward(self, input, initial_states=None):
-        if initial_states is None:
-            zeros = Variable(torch.zeros(input.size(0), self.hidden_size))
-            initial_states = [zeros] * self.num_layers
-        if type(initial_states) not in [list, tuple]:
-            initial_states = [initial_states] * self.num_layers
-        assert len(initial_states) == self.num_layers
-
-        states = initial_states
-        outputs = []
-
-        time_steps = input.size(1)
-        for t in range(time_steps):
-            x = input[:, t, :]
-            for l in range(self.num_layers):
-                x = getattr(self, 'cell{}'.format(l))(x, states[l])
-                states[l] = x
-            outputs.append(x)
-
-        if self.return_sequences:
-            output = torch.stack(outputs).transpose(0, 1)
-        else:
-            output = outputs[-1]
-        return output
-
-
-class LSTM(Module):
-
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, 
-                 return_sequences=True, grad_clip=None):
-        super(LSTM, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.bias = bias
-        self.return_sequences = return_sequences
-        self.grad_clip = grad_clip
-
-        self.cell0= LSTMCell(input_size, hidden_size, bias, grad_clip=grad_clip)
-        for i in range(1, num_layers):
-            cell = LSTMCell(hidden_size, hidden_size, bias, grad_clip=grad_clip)
-            setattr(self, 'cell{}'.format(i), cell)
-
-    def forward(self, input, initial_states=None):
-        if initial_states is None:
-            zeros = Variable(torch.zeros(input.size(0), self.hidden_size))
-            initial_states = [(zeros, zeros)] * self.num_layers
-        assert len(initial_states) == self.num_layers
-
-        states = initial_states
-        outputs = []
-
-        time_steps = input.size(1)
-        for t in range(time_steps):
-            x = input[:, t, :]
-            for l in range(self.num_layers):
-                hx = getattr(self, 'cell{}'.format(l))(x, states[l])
-                states[l] = hx 
-                x = hx[0]
-            outputs.append(x)
-
-        if self.return_sequences:
-            output = torch.stack(outputs).transpose(0, 1)
-        else:
-            output = outputs[-1]
-        return output
-
-
-class LSTMP(Module):
-
-    def __init__(self, input_size, hidden_size, recurrent_size, num_layers=1, bias=True, 
-                 return_sequences=True, grad_clip=None):
-        super(LSTMP, self).__init__()
+        super(RNNBase, self).__init__()
+        self.mode = mode
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.recurrent_size = recurrent_size
@@ -313,16 +190,35 @@ class LSTMP(Module):
         self.return_sequences = return_sequences
         self.grad_clip = grad_clip
 
-        self.cell0= LSTMPCell(input_size, hidden_size, recurrent_size, bias, grad_clip=grad_clip)
+        mode2cell = {'RNN': RNNCell,
+                     'GRU': GRUCell,
+                     'LSTM': LSTMCell,
+                     'LSTMP': LSTMPCell}
+        Cell = mode2cell[mode]
+
+        kwargs = {'input_size': input_size,
+                  'hidden_size': hidden_size,
+                  'bias': bias,
+                  'grad_clip': grad_clip}
+        if self.mode == 'LSTMP':
+            kwargs['recurrent_size'] = recurrent_size
+
+        self.cell0= Cell(**kwargs)
         for i in range(1, num_layers):
-            cell = LSTMPCell(recurrent_size, hidden_size, recurrent_size, bias, grad_clip=grad_clip)
+            kwargs['input_size'] = recurrent_size if self.mode == 'LSTMP' else hidden_size
+            cell = Cell(**kwargs)
             setattr(self, 'cell{}'.format(i), cell)
 
     def forward(self, input, initial_states=None):
         if initial_states is None:
-            zeros_h = Variable(torch.zeros(input.size(0), self.recurrent_size))
-            zeros_c = Variable(torch.zeros(input.size(0), self.hidden_size))
-            initial_states = [(zeros_h, zeros_c)] * self.num_layers
+            zeros = Variable(torch.zeros(input.size(0), self.hidden_size))
+            if self.mode == 'LSTM':
+                initial_states = [(zeros, zeros), ] * self.num_layers
+            elif self.mode == 'LSTMP':
+                zeros_h = Variable(torch.zeros(input.size(0), self.recurrent_size))
+                initial_states = [(zeros_h, zeros), ] * self.num_layers
+            else:
+                initial_states = [zeros] * self.num_layers
         assert len(initial_states) == self.num_layers
 
         states = initial_states
@@ -333,12 +229,45 @@ class LSTMP(Module):
             x = input[:, t, :]
             for l in range(self.num_layers):
                 hx = getattr(self, 'cell{}'.format(l))(x, states[l])
-                states[l] = hx 
-                x = hx[0]
-            outputs.append(x)
+                states[l] = hx
+                if self.mode.startswith('LSTM'):
+                    x = hx[0]
+                else:
+                    x = hx
+            outputs.append(hx)
 
         if self.return_sequences:
-            output = torch.stack(outputs).transpose(0, 1)
+            if self.mode.startswith('LSTM'):
+                hs, cs = zip(*outputs)
+                h = torch.stack(hs).transpose(0, 1)
+                c = torch.stack(cs).transpose(0, 1)
+                output = (h, c)
+            else:
+                output = torch.stack(outputs).transpose(0, 1)
         else:
             output = outputs[-1]
         return output
+
+
+class RNN(RNNBase):
+
+    def __init__(self, *args, **kwargs):
+        super(RNN, self).__init__('RNN', *args, **kwargs)
+
+
+class GRU(RNNBase):
+
+    def __init__(self, *args, **kwargs):
+        super(GRU, self).__init__('GRU', *args, **kwargs)
+
+
+class LSTM(RNNBase):
+
+    def __init__(self, *args, **kwargs):
+        super(LSTM, self).__init__('LSTM', *args, **kwargs)
+
+
+class LSTMP(RNNBase):
+
+    def __init__(self, *args, **kwargs):
+        super(LSTMP, self).__init__('LSTMP', *args, **kwargs)

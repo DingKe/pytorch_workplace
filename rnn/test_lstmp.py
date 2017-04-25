@@ -47,7 +47,8 @@ class RNNModel(nn.Module):
         self.recurrent_size = recurrent_size
         self.num_layers = num_layers
 
-        self.rnn = LSTMP(input_size, hidden_size, recurrent_size, num_layers, bias=bias, return_sequences=False, grad_clip=None)
+        self.rnn = LSTMP(input_size, hidden_size, recurrent_size, num_layers=num_layers, 
+                         bias=bias, return_sequences=False, grad_clip=None)
         self.fc = nn.Linear(recurrent_size, num_classes, bias=bias)
     
     def forward(self, x):
@@ -58,7 +59,7 @@ class RNNModel(nn.Module):
         
         # Forward propagate RNN
         #out = self.rnn(x, initial_states)  
-        out = self.rnn(x, initial_states=None)  
+        out, _ = self.rnn(x, initial_states=None)  
         
         # Decode hidden state of last time step
         out = self.fc(out)  

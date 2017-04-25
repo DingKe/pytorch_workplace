@@ -45,7 +45,8 @@ class RNNModel(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.rnn = LSTM(input_size, hidden_size, num_layers, bias=bias, return_sequences=False, grad_clip=None)
+        self.rnn = LSTM(input_size, hidden_size, num_layers=num_layers, 
+                        bias=bias, return_sequences=False, grad_clip=None)
         self.fc = nn.Linear(hidden_size, num_classes, bias=bias)
     
     def forward(self, x):
@@ -54,7 +55,7 @@ class RNNModel(nn.Module):
         initial_states = [(zeros, zeros)] * self.num_layers
         
         # Forward propagate RNN
-        out = self.rnn(x, initial_states)  
+        out, _ = self.rnn(x, initial_states)  
         
         # Decode hidden state of last time step
         out = self.fc(out)  

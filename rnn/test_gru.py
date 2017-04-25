@@ -45,7 +45,8 @@ class RNNModel(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.rnn = GRU(input_size, hidden_size, num_layers, bias=bias, return_sequences=False, grad_clip=grad_clip)
+        self.rnn = GRU(input_size, hidden_size, num_layers=num_layers, 
+                       bias=bias, return_sequences=False, grad_clip=grad_clip)
         self.fc = nn.Linear(hidden_size, num_classes, bias=bias)
     
     def forward(self, x):
