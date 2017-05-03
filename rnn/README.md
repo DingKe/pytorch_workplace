@@ -1,4 +1,6 @@
-RNN definition in pytorch
+Implement RNN (Vanilla, GRU, LSTM, LSTMP) from scratch.
 
 * modules.py - define RNN variants
-* test_[rnn].py - demo
+* test_rnn.py - demo
+
+Gradient is clipped to avoid explosion using pytorch Variable's [register_hook](./modules.py#L9) function.
