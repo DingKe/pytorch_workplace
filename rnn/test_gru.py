@@ -60,7 +60,7 @@ class RNNModel(nn.Module):
         out = self.fc(out)  
         return out
 
-rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=1)
+rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=10)
 
 
 # Loss and Optimizer
@@ -97,4 +97,4 @@ for images, labels in test_loader:
 print('Test Accuracy of the model on the 10000 test images: %d %%' % (100 * correct / total)) 
 
 # Save the Model
-torch.save(rnn.state_dict(), 'rnn.pkl')
+torch.save(rnn.state_dict(), 'gru.pkl')

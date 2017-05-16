@@ -61,7 +61,7 @@ class RNNModel(nn.Module):
         out = self.fc(out)  
         return out
 
-rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=1)
+rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=10)
 
 
 # Loss and Optimizer

@@ -46,7 +46,7 @@ class RNNModel(nn.Module):
         self.num_layers = num_layers
 
         self.rnn = LSTM(input_size, hidden_size, num_layers=num_layers, 
-                        bias=bias, return_sequences=False, grad_clip=None)
+                        bias=bias, return_sequences=False, grad_clip=grad_clip)
         self.fc = nn.Linear(hidden_size, num_classes, bias=bias)
     
     def forward(self, x):
@@ -61,7 +61,7 @@ class RNNModel(nn.Module):
         out = self.fc(out)  
         return out
 
-rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=1)
+rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=10)
 
 
 # Loss and Optimizer
@@ -98,4 +98,4 @@ for images, labels in test_loader:
 print('Test Accuracy of the model on the 10000 test images: %d %%' % (100 * correct / total)) 
 
 # Save the Model
-torch.save(rnn.state_dict(), 'rnn.pkl')
+torch.save(rnn.state_dict(), 'lstm.pkl')
