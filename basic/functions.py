@@ -30,7 +30,7 @@ class LinearF(Function):
 
         output = torch.mm(input, weight.t())
         if bias is not None:
-            output += bias.unsqueeze(0).expand_as(output)
+            output += bias
 
         return output
 
