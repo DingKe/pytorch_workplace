@@ -11,22 +11,21 @@ class BinaryTanh(nn.Module):
     def __init__(self):
         super(BinaryTanh, self).__init__()
         self.hardtanh = nn.Hardtanh()
-        self.binarize = BinarizeF()
 
     def forward(self, input):
         output = self.hardtanh(input)
-        output = self.binarize(output)
+        output = binarize(output)
         return output
         
 
 class BinaryLinear(nn.Linear):
 
     def forward(self, input):
-        binary_weight = BinarizeF()(self.weight)
+        binary_weight = binarize(self.weight)
         if self.bias is None:
-            return self._backend.Linear()(input, binary_weight)
+            return F.linear(input, binary_weight)
         else:
-            return self._backend.Linear()(input, binary_weight, self.bias)
+            return F.linear(input, binary_weight, self.bias)
 
     def reset_parameters(self):
         # Glorot initialization
@@ -43,7 +42,7 @@ class BinaryLinear(nn.Linear):
 class BinaryConv2d(nn.Conv2d):
 
     def forward(self, input):
-        bw = BinarizeF()(self.weight)
+        bw = binarize(self.weight)
         return F.conv2d(input, bw, self.bias, self.stride,
                                self.padding, self.dilation, self.groups)
 

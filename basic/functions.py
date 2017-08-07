@@ -7,15 +7,17 @@ from torch.autograd import Function
 
 class ReLUF(Function):
 
-    def forward(self, input):
-        self.save_for_backward(input)
+    @staticmethod
+    def forward(cxt, input):
+        cxt.save_for_backward(input)
 
         output = input.clamp(min=0)
 
         return output
 
-    def backward(self, grad_output):
-        input = self.saved_tensors[0]
+    @staticmethod
+    def backward(cxt, grad_output):
+        input, = cxt.saved_tensors
 
         grad_input = grad_output.clone()
         grad_input[input < 0] = 0
@@ -25,8 +27,9 @@ class ReLUF(Function):
 
 class LinearF(Function):
 
-    def forward(self, input, weight, bias=None):
-        self.save_for_backward(input, weight, bias)
+    @staticmethod
+    def forward(cxt, input, weight, bias=None):
+        cxt.save_for_backward(input, weight, bias)
 
         output = torch.mm(input, weight.t())
         if bias is not None:
@@ -34,21 +37,27 @@ class LinearF(Function):
 
         return output
 
-    def backward(self, grad_output):
-        input, weight, bias = self.saved_tensors
+    @staticmethod
+    def backward(cxt, grad_output):
+        input, weight, bias = cxt.saved_variables
 
         grad_input = grad_weight = grad_bias = None
-        if self.needs_input_grad[0]:
+        if cxt.needs_input_grad[0]:
             grad_input = torch.mm(grad_output, weight)
-        if self.needs_input_grad[1]:
+        if cxt.needs_input_grad[1]:
             grad_weight = torch.mm(grad_output.t(), input)
-        if bias is not None and self.needs_input_grad[2]:
+        if bias is not None and cxt.needs_input_grad[2]:
             grad_bias = grad_output.sum(0).squeeze(0)
 
         if bias is not None:
             return grad_input, grad_weight, grad_bias
         else:
             return grad_input, grad_weight
+
+
+# aliases
+relu = ReLUF.apply
+linear = LinearF.apply
 
 
 # simple test
@@ -59,7 +68,7 @@ if __name__ == "__main__":
     a = torch.randn(2, 3)
 
     va = Variable(a, requires_grad=True)
-    vb = ReLUF()(va)
+    vb = relu(va)
     print va.data, vb.data
 
     vb.backward(torch.ones(va.size()))

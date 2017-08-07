@@ -4,7 +4,7 @@ import torchvision.datasets as dsets
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 
-from functions import ReLUF
+from functions import relu
 
 
 # Hyper Parameters 
@@ -43,7 +43,7 @@ class Net(nn.Module):
     
     def forward(self, x):
         out = self.fc1(x)
-        out = ReLUF()(out)
+        out = relu(out)
         out = self.fc2(out)
         return out
     

@@ -60,10 +60,7 @@ class meLinear(nn.Linear):
         self.simplified = simplified
 
     def forward(self, input):
-        if self.bias is None:
-            output = self._backend.Linear()(input, self.weight)
-        else:
-            output = self._backend.Linear()(input, self.weight, self.bias)
+        output = F.linear(input, self.weight, self.bias)
         return sparsify_grad(output, self.k, self.simplified)
 
     def reset_parameters(self):

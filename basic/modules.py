@@ -8,7 +8,7 @@ from functions import *
 
 class ReLU(nn.Module):
     def forward(self, input):
-        return ReLUF()(input)
+        return relu(input)
 
 
 class Linear(nn.Module):
@@ -55,7 +55,7 @@ class Linear(nn.Module):
             self.bias.data.zero_()
 
     def forward(self, input):
-        return LinearF()(input, self.weight, self.bias)
+        return linear(input, self.weight, self.bias)
 
     def __repr__(self):
         return self.__class__.__name__ + ' (' \
