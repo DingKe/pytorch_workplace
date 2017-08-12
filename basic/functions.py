@@ -17,7 +17,7 @@ class ReLUF(Function):
 
     @staticmethod
     def backward(cxt, grad_output):
-        input, = cxt.saved_tensors
+        input, = cxt.saved_variables
 
         grad_input = grad_output.clone()
         grad_input[input < 0] = 0
