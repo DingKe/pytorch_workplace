@@ -21,15 +21,17 @@ def one_hot(index, classes):
 
 class FocalLoss(nn.Module):
 
-    def __init__(self, gamma=0):
+    def __init__(self, gamma=0, eps=1e-7):
         super(FocalLoss, self).__init__()
         self.gamma = gamma
+        self.eps = eps
 
     def forward(self, input, target):
-        log_input = F.log_softmax(input)
         y = one_hot(target, input.size(-1))
+        logit = F.softmax(input)
+        logit = logit.clamp(self.eps, 1. - self.eps)
 
-        loss = -1 * y * log_input  # cross entropy
-        loss = loss * (1 - log_input) ** self.gamma # focal loss
+        loss = -1 * y * torch.log(logit) # cross entropy
+        loss = loss * (1 - logit) ** self.gamma # focal loss
 
         return loss.sum()

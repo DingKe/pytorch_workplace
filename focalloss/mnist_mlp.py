@@ -7,6 +7,8 @@ from torch.autograd import Variable
 from loss import FocalLoss
 
 
+torch.manual_seed(1111)
+
 # Hyper Parameters 
 input_size = 784
 hidden_size = 500
@@ -15,7 +17,7 @@ num_epochs = 5
 batch_size = 100
 learning_rate = 0.001
 
-gamma = 0
+gamma = 2
 
 # MNIST Dataset 
 train_dataset = dsets.MNIST(root='../data', 
