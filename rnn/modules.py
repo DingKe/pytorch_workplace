@@ -62,7 +62,8 @@ class GRUCell(RNNCellBase):
         self.grad_clip = grad_clip
 
         self.weight_ih = Parameter(torch.Tensor(3 * hidden_size, input_size))
-        self.weight_hh = Parameter(torch.Tensor(3 * hidden_size, hidden_size))
+        self.weight_hh_rz = Parameter(torch.Tensor(2 * hidden_size, hidden_size))
+        self.weight_hh = Parameter(torch.Tensor(hidden_size, hidden_size))
         if bias:
             self.bias = Parameter(torch.Tensor(3 * hidden_size))
         else:
@@ -77,15 +78,20 @@ class GRUCell(RNNCellBase):
 
     def forward(self, input, h):
         ih = F.linear(input, self.weight_ih, self.bias)
-        hh = F.linear(h, self.weight_hh)
+        hh_rz = F.linear(h, self.weight_hh_rz)
 
         if self.grad_clip:
             ih = clip_grad(ih, -self.grad_clip, self.grad_clip)
-            hh = clip_grad(hh, -self.grad_clip, self.grad_clip)
+            hh_rz = clip_grad(hh_rz, -self.grad_clip, self.grad_clip)
 
-        r = F.sigmoid(ih[:, :self.hidden_size] + hh[:, :self.hidden_size])
-        i = F.sigmoid(ih[:, self.hidden_size: self.hidden_size * 2] + hh[:, self.hidden_size: self.hidden_size * 2])
-        n = F.relu(ih[:, self.hidden_size * 2:] * r + hh[:, self.hidden_size * 2:])
+        r = F.sigmoid(ih[:, :self.hidden_size] + hh_rz[:, :self.hidden_size])
+        i = F.sigmoid(ih[:, self.hidden_size: self.hidden_size * 2] + hh_rz[:, self.hidden_size:])
+
+        hhr = F.linear(h * r, self.weight_hh)
+        if self.grad_clip:
+            hhr = clip_grad(hhr, -self.grad_clip, self.grad_clip)
+            
+        n = F.relu(ih[:, self.hidden_size * 2:] + hhr)
         h = (1 - i) * n + i * h
 
         return h
@@ -176,6 +182,47 @@ class LSTMPCell(RNNCellBase):
         return h, c
 
 
+class MGRUCell(RNNCellBase):
+    '''Minimal GRU
+    Reference:
+    Ravanelli et al. [Improving speech recognition by revising gated recurrent units](https://arxiv.org/abs/1710.00641).
+    '''
+
+    def __init__(self, input_size, hidden_size, bias=True, grad_clip=None):
+        super(MGRUCell, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.grad_clip = grad_clip
+
+        self.weight_ih = Parameter(torch.Tensor(2 * hidden_size, input_size))
+        self.weight_hh = Parameter(torch.Tensor(2 * hidden_size, hidden_size))
+        if bias:
+            self.bias = Parameter(torch.Tensor(2 * hidden_size))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.hidden_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, input, h):
+        ih = F.linear(input, self.weight_ih, self.bias)
+        hh = F.linear(h, self.weight_hh)
+
+        if self.grad_clip:
+            ih = clip_grad(ih, -self.grad_clip, self.grad_clip)
+            hh = clip_grad(hh, -self.grad_clip, self.grad_clip)
+
+        z = F.sigmoid(ih[:, :self.hidden_size] + hh[:, :self.hidden_size])
+        n = F.relu(ih[:, self.hidden_size:] + hh[:, self.hidden_size:])
+        h = (1 - z) * n + z * h
+
+        return h
+
+
 class RNNBase(Module):
 
     def __init__(self, mode, input_size, hidden_size, recurrent_size=None, num_layers=1, bias=True, 
@@ -192,6 +239,7 @@ class RNNBase(Module):
 
         mode2cell = {'RNN': RNNCell,
                      'GRU': GRUCell,
+                     'MGRU': GRUCell,
                      'LSTM': LSTMCell,
                      'LSTMP': LSTMPCell}
         Cell = mode2cell[mode]
@@ -259,6 +307,12 @@ class GRU(RNNBase):
 
     def __init__(self, *args, **kwargs):
         super(GRU, self).__init__('GRU', *args, **kwargs)
+
+
+class MGRU(RNNBase):
+
+    def __init__(self, *args, **kwargs):
+        super(MGRU, self).__init__('MGRU', *args, **kwargs)
 
 
 class LSTM(RNNBase):
