@@ -21,7 +21,7 @@ def simplified_topk(x, k):
     if x.dim() > 2:
         original_size = x.size()
         x = x.view(x.size(0), -1)
-    ax = torch.sum(x.data.abs(), 0).view(-1)
+    ax = x.data.abs().sum(0).view(-1)
     topk, ids = ax.topk(x.size(-1)-k, dim=0, largest=False)
     y = x.clone()
     # zero out small values

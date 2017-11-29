@@ -31,7 +31,7 @@ class LinearF(Function):
     def forward(cxt, input, weight, bias=None):
         cxt.save_for_backward(input, weight, bias)
 
-        output = torch.mm(input, weight.t())
+        output = input.mm(weight.t())
         if bias is not None:
             output += bias
 
@@ -43,9 +43,9 @@ class LinearF(Function):
 
         grad_input = grad_weight = grad_bias = None
         if cxt.needs_input_grad[0]:
-            grad_input = torch.mm(grad_output, weight)
+            grad_input = grad_output.mm(weight)
         if cxt.needs_input_grad[1]:
-            grad_weight = torch.mm(grad_output.t(), input)
+            grad_weight = grad_output.t().mm(input)
         if bias is not None and cxt.needs_input_grad[2]:
             grad_bias = grad_output.sum(0).squeeze(0)
 
