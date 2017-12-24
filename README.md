@@ -24,3 +24,5 @@ Focal Loss
 ## [senet](./senet)
 Squeeze and Excitation Networks
 
+## [swish](./swish)
+Sigmoid-weighted Linear Units (i.e. Swish activation)
