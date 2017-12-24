@@ -15,8 +15,12 @@ Manipulate learning by 1) modifying optimizer ([mlp.py](./binary/adam.py#L72)) o
 ## [cffi](./cffi)
 Extend pytorch with cffi.
 
-##[meprop](./meprop)
+## [meprop](./meprop)
 meprop training
 
-##[focalloss](./focalloss)
+## [focalloss](./focalloss)
 Focal Loss
+
+## [senet](./senet)
+Squeeze and Excitation Networks
+
