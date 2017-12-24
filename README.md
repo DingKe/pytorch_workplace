@@ -26,3 +26,6 @@ Squeeze and Excitation Networks
 
 ## [swish](./swish)
 Sigmoid-weighted Linear Units (i.e. Swish activation)
+
+## [amsgrad](./amsgrad)
+Modified (corrected) Adam optimizer.
