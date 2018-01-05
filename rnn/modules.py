@@ -223,6 +223,56 @@ class MGRUCell(RNNCellBase):
         return h
 
 
+class LSTMPFCell(RNNCellBase):
+    '''
+    References:
+     - Kuchaiev et al. Factorization Tricks for LSTM Networks.
+    '''
+
+    def __init__(self, input_size, hidden_size, recurrent_size, reduce_size=None, bias=True, grad_clip=None):
+        super(LSTMPFCell, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.recurrent_size = recurrent_size
+        reduce_size = reduce_size if reduce_size else min(hidden_size, (input_size + recurrent_size) // 2) // 2
+        self.grad_clip = grad_clip
+
+        self.weight_1 = Parameter(torch.Tensor(4 * hidden_size, reduce_size))
+        self.weight_2 = Parameter(torch.Tensor(reduce_size, input_size + recurrent_size))
+        self.weight_rec = Parameter(torch.Tensor(recurrent_size, hidden_size))
+        if bias:
+            self.bias = Parameter(torch.Tensor(4 * hidden_size))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 0.01
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, input, hx):
+        h, c = hx
+
+        x = torch.cat([input, h], 1)
+        weight = F.linear(self.weight_1, self.weight_2.t())
+        pre = F.linear(x, weight, self.bias)
+
+        if self.grad_clip:
+            pre = clip_grad(pre, -self.grad_clip, self.grad_clip)
+
+        i = F.sigmoid(pre[:, :self.hidden_size])
+        f = F.sigmoid(pre[:, self.hidden_size: self.hidden_size * 2])
+        g = F.tanh(pre[:, self.hidden_size * 2: self.hidden_size * 3])
+        o = F.sigmoid(pre[:, self.hidden_size * 3:])
+
+        c = f * c + i * g
+        h = o * F.tanh(c)
+        h = F.linear(h, self.weight_rec)
+        return h, c
+
+
 class RNNBase(Module):
 
     def __init__(self, mode, input_size, hidden_size, recurrent_size=None, num_layers=1, bias=True, 
@@ -241,19 +291,20 @@ class RNNBase(Module):
                      'GRU': GRUCell,
                      'MGRU': GRUCell,
                      'LSTM': LSTMCell,
-                     'LSTMP': LSTMPCell}
+                     'LSTMP': LSTMPCell,
+                     'LSTMPF': LSTMPFCell}
         Cell = mode2cell[mode]
 
         kwargs = {'input_size': input_size,
                   'hidden_size': hidden_size,
                   'bias': bias,
                   'grad_clip': grad_clip}
-        if self.mode == 'LSTMP':
+        if self.mode.startswith('LSTMP'):
             kwargs['recurrent_size'] = recurrent_size
 
         self.cell0= Cell(**kwargs)
         for i in range(1, num_layers):
-            kwargs['input_size'] = recurrent_size if self.mode == 'LSTMP' else hidden_size
+            kwargs['input_size'] = recurrent_size if self.mode.startswith('LSTMP') else hidden_size
             cell = Cell(**kwargs)
             setattr(self, 'cell{}'.format(i), cell)
 
@@ -262,7 +313,7 @@ class RNNBase(Module):
             zeros = Variable(torch.zeros(input.size(0), self.hidden_size))
             if self.mode == 'LSTM':
                 initial_states = [(zeros, zeros), ] * self.num_layers
-            elif self.mode == 'LSTMP':
+            elif self.mode.startswith('LSTMP'):
                 zeros_h = Variable(torch.zeros(input.size(0), self.recurrent_size))
                 initial_states = [(zeros_h, zeros), ] * self.num_layers
             else:
@@ -325,3 +376,9 @@ class LSTMP(RNNBase):
 
     def __init__(self, *args, **kwargs):
         super(LSTMP, self).__init__('LSTMP', *args, **kwargs)
+
+
+class LSTMPF(RNNBase):
+
+    def __init__(self, *args, **kwargs):
+        super(LSTMPF, self).__init__('LSTMPF', *args, **kwargs)
