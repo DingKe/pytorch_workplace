@@ -1,4 +1,4 @@
-Implement RNN (Vanilla, GRU, LSTM, LSTMP) from scratch.
+Implement RNN (Vanilla, GRU, MGRU, LSTM, LSTMP, LSTMPF) from scratch.
 
 * modules.py - define RNN variants
 * test_rnn.py - demo
