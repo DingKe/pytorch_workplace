@@ -29,3 +29,6 @@ Sigmoid-weighted Linear Units (i.e. Swish activation)
 
 ## [amsgrad](./amsgrad)
 Modified (corrected) Adam optimizer.
+
+## [nvrtc](./nvrtc)
+CUDA extension by compiling CUDA kernels online.
