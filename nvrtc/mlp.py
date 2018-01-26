@@ -44,7 +44,7 @@ class Net(nn.Module):
     
     def forward(self, x):
         out = self.fc1(x)
-        out = self.relu(out, use_cuda=torch.cuda.is_available)
+        out = self.relu(out, use_cuda=torch.cuda.is_available())
         out = self.fc2(out)
         return out
     
