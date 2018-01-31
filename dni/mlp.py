@@ -11,8 +11,8 @@ hidden_size = 256
 dni_size = 1024
 num_classes = 10
 num_epochs = 50
-batch_size = 250 
-learning_rate = 3e-5
+batch_size = 500
+learning_rate = 1e-3
 
 use_cuda = torch.cuda.is_available()
 
