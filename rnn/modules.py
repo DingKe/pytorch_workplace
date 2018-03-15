@@ -223,6 +223,41 @@ class MGRUCell(RNNCellBase):
         return h
 
 
+class IndRNNCell(RNNCellBase):
+    '''
+    References:
+    Li et al. [Independently Recurrent Neural Network (IndRNN): Building A Longer and Deeper RNN](https://arxiv.org/abs/1803.04831).
+    '''
+
+    def __init__(self, input_size, hidden_size, bias=True, grad_clip=None):
+        super(IndRNNCell, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.grad_clip = grad_clip
+
+        self.weight_ih = Parameter(torch.Tensor(hidden_size, input_size))
+        self.weight_hh = Parameter(torch.Tensor(hidden_size))
+        if bias:
+            self.bias = Parameter(torch.Tensor(hidden_size))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.hidden_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, input, h):
+        output = F.linear(input, self.weight_ih, self.bias) + h * self.weight_hh
+        if self.grad_clip:
+            output = clip_grad(output, -self.grad_clip, self.grad_clip) # avoid explosive gradient
+        output = F.relu(output)
+
+        return output
+
+
 class RNNBase(Module):
 
     def __init__(self, mode, input_size, hidden_size, recurrent_size=None, num_layers=1, bias=True, 
@@ -238,6 +273,7 @@ class RNNBase(Module):
         self.grad_clip = grad_clip
 
         mode2cell = {'RNN': RNNCell,
+                     'IndRNN': IndRNNCell,
                      'GRU': GRUCell,
                      'MGRU': GRUCell,
                      'LSTM': LSTMCell,
@@ -325,3 +361,13 @@ class LSTMP(RNNBase):
 
     def __init__(self, *args, **kwargs):
         super(LSTMP, self).__init__('LSTMP', *args, **kwargs)
+
+
+class IndRNN(RNNBase):
+    '''
+    References:
+    Li et al. [Independently Recurrent Neural Network (IndRNN): Building A Longer and Deeper RNN](https://arxiv.org/abs/1803.04831).
+    '''
+
+    def __init__(self, *args, **kwargs):
+        super(IndRNN, self).__init__('IndRNN', *args, **kwargs)
