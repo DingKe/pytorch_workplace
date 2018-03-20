@@ -18,6 +18,7 @@ momentum = 0.9
 nesterov = True
 topk = 1  # percent
 max_val = 10
+sample_rate = 0.1
 
 # MNIST Dataset 
 train_dataset = dsets.MNIST(root='../data', 
@@ -59,7 +60,8 @@ net = Net(input_size, hidden_size, num_classes)
 criterion = nn.CrossEntropyLoss()  
 optimizer = DGC(net.parameters(), lr=learning_rate,
                 momentum=momentum, nesterov=nesterov,
-                topk=topk, max_val=max_val) 
+                topk=topk, max_val=max_val, 
+                sample_rate=sample_rate) 
 #optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate,
 #                            momentum=momentum, nesterov=nesterov)  
 

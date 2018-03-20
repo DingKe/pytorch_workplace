@@ -1,6 +1,25 @@
 import torch
 from torch.optim.optimizer import Optimizer, required
 
+import numpy as np
+
+
+def kth(arr, topk, sample_rate=1):
+    # to numpy array
+    arr = arr.numpy().ravel()
+
+    if sample_rate < 1:
+        arr = np.random.choice(arr, int(arr.size * sample_rate), replace=False)
+
+    arr = np.abs(arr)
+    num = arr.size
+
+    k = max(1, topk * num / 100)
+    ids = np.argpartition(arr, -k)[-k:]
+    thr = float(np.min(arr[ids]))
+
+    return thr
+
 
 class DGC(Optimizer):
     r"""Implement Deep Gradient Compression for momentum SGD.
@@ -23,10 +42,11 @@ class DGC(Optimizer):
     """
 
     def __init__(self, params, lr=required, momentum=0, topk=1,
-                 weight_decay=0, nesterov=False, max_val=None):
+                 weight_decay=0, nesterov=False, 
+                 max_val=None, sample_rate=0.1):
         defaults = dict(lr=lr, momentum=momentum, topk=topk,
                         weight_decay=weight_decay, nesterov=nesterov,
-                        max_val=max_val)
+                        max_val=max_val, sample_rate=sample_rate)
         if nesterov and momentum <= 0:
             raise ValueError("Nesterov momentum requires a momentum")
         super(DGC, self).__init__(params, defaults)
@@ -53,6 +73,7 @@ class DGC(Optimizer):
             nesterov = group['nesterov']
             topk = group['topk']
             max_val = group['max_val']
+            sample_rate = group['sample_rate']
 
             for p in group['params']:
                 if p.grad is None:
@@ -86,11 +107,7 @@ class DGC(Optimizer):
                         v.add_(u)
 
                     # threshold
-                    n = d_p.numel()
-                    k = max(min(10, n), topk * n / 100)
-
-                    tops, _ = v.view((n,)).abs().topk(k)
-                    thr = tops[-1]
+                    thr = kth(v, topk, sample_rate=sample_rate)
 
                     mask = (v.abs() >= thr).type(d_p.type())
                     nmask = (v.abs() < thr).type(d_p.type())
@@ -107,11 +124,7 @@ class DGC(Optimizer):
                     g.add_(d_p)
 
                     # threshold
-                    n = d_p.numel()
-                    k = max(min(10, n), topk * n / 100)
-
-                    tops, _ = g.view((n,)).abs().topk(k)
-                    thr = tops[-1]
+                    thr = kth(g, topk, sample_rate=sample_rate)
 
                     mask = (g.abs() >= thr).type(d_p.type())
                     nmask = (g.abs() < thr).type(d_p.type())
