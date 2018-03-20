@@ -1,7 +1,7 @@
 Learn pytorch with examples.
 
 ## [basic](./basic)
-Toy example shows how to write customized Function and Module
+Toy example shows how to write customized Function and Module.
 
 ## [rnn](./rnn)
 Implementation RNN (Vanilla, GRU, LSTM, LSTMP) from scratch.
@@ -32,3 +32,6 @@ Modified (corrected) Adam optimizer.
 
 ## [nvrtc](./nvrtc)
 CUDA extension by compiling CUDA kernels online.
+
+## [dgc](./dgc)
+Deep Gradient Compression.
