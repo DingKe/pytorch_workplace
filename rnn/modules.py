@@ -7,8 +7,9 @@ from torch.autograd import Variable
 
 
 def clip_grad(v, min, max):
-    v.register_hook(lambda g: g.clamp(min, max))
-    return v
+    v_tmp = v.expand_as(v)
+    v_tmp.register_hook(lambda g: g.clamp(min, max))
+    return v_tmp
 
 
 class RNNCellBase(Module):
