@@ -14,7 +14,7 @@ def kth(arr, topk, sample_rate=1):
     arr = np.abs(arr)
     num = arr.size
 
-    k = max(1, topk * num / 100)
+    k = max(1, topk * num // 100)
     ids = np.argpartition(arr, -k)[-k:]
     thr = float(np.min(arr[ids]))
 

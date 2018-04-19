@@ -28,7 +28,7 @@ class FocalLoss(nn.Module):
 
     def forward(self, input, target):
         y = one_hot(target, input.size(-1))
-        logit = F.softmax(input)
+        logit = F.softmax(input, dim=-1)
         logit = logit.clamp(self.eps, 1. - self.eps)
 
         loss = -1 * y * torch.log(logit) # cross entropy

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import math
 import torch
 from torch.autograd import Variable
@@ -119,7 +121,6 @@ if __name__ == '__main__':
 
     x_grad_copy = x.grad.clone()
 
-    print()
     print('CPU ReLU')
     print('=-=-' * 5)
 

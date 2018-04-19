@@ -12,7 +12,7 @@ class ReLUF(Function):
         if not input.is_cuda:
             ext_lib.relu_forward(input, output)
         else:
-            raise Exception, "No CUDA Implementation"
+            raise Exception("No CUDA Implementation")
         return output
 
     def backward(self, grad_output):
@@ -22,5 +22,5 @@ class ReLUF(Function):
         if not grad_output.is_cuda:
             ext_lib.relu_backward(grad_output, input, grad_input)
         else:
-            raise Exception, "No CUDA Implementation"
+            raise Exception("No CUDA Implementation")
         return grad_input

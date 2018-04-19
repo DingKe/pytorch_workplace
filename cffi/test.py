@@ -26,6 +26,7 @@ output.backward(torch.ones(input.size()))
 print(input.grad.data)
 
 if torch.cuda.is_available():
+    print('test cuda')
     input = input.cuda()
     output = model(input)
     print(output)

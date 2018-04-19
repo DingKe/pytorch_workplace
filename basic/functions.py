@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import math
 
 import torch
@@ -17,7 +19,7 @@ class ReLUF(Function):
 
     @staticmethod
     def backward(cxt, grad_output):
-        input, = cxt.saved_variables
+        input, = cxt.saved_tensors
 
         grad_input = grad_output.clone()
         grad_input[input < 0] = 0
@@ -69,7 +71,7 @@ if __name__ == "__main__":
 
     va = Variable(a, requires_grad=True)
     vb = relu(va)
-    print va.data, vb.data
+    print(va.data, vb.data)
 
     vb.backward(torch.ones(va.size()))
-    print va.grad.data
+    print(va.grad.data)
