@@ -139,6 +139,60 @@ class LSTMCell(RNNCellBase):
         return h, c
 
 
+def cumax(logits, dim=-1):
+    return torch.cumsum(F.softmax(logits, dim), dim=dim)
+
+
+class LSTMONCell(RNNCellBase):
+    '''
+    Shen & Tan et al. ORDERED NEURONS: INTEGRATING TREE STRUCTURES INTO RECURRENT NEURAL NETWORKS
+    '''
+
+    def __init__(self, input_size, hidden_size, bias=True, grad_clip=None):
+        super(LSTMONCell, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.grad_clip = grad_clip
+
+        self.weight_ih = Parameter(torch.Tensor(6 * hidden_size, input_size))
+        self.weight_hh = Parameter(torch.Tensor(6 * hidden_size, hidden_size))
+        if bias:
+            self.bias = Parameter(torch.Tensor(6 * hidden_size))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.hidden_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+
+    def forward(self, input, hx):
+        h, c = hx
+
+        pre = F.linear(input, self.weight_ih, self.bias) \
+                    + F.linear(h, self.weight_hh)
+
+        if self.grad_clip:
+            pre = clip_grad(pre, -self.grad_clip, self.grad_clip)
+
+        i = F.sigmoid(pre[:, :self.hidden_size])
+        f = F.sigmoid(pre[:, self.hidden_size: self.hidden_size * 2])
+        g = F.tanh(pre[:, self.hidden_size * 2: self.hidden_size * 3])
+        o = F.sigmoid(pre[:, self.hidden_size * 3: self.hidden_size * 4])
+        ff = cumax(pre[:, self.hidden_size * 4: self.hidden_size * 5])
+        ii = 1 - cumax(pre[:, self.hidden_size * 5: self.hidden_size * 6])
+
+        w = ff * ii
+        f = f * w + (ff - w)
+        i = i * w + (ii - w)
+
+        c = f * c + i * g
+        h = o * F.tanh(c)
+        return h, c
+
+
 class LSTMPCell(RNNCellBase):
 
     def __init__(self, input_size, hidden_size, recurrent_size, bias=True, grad_clip=None):
@@ -278,6 +332,7 @@ class RNNBase(Module):
                      'GRU': GRUCell,
                      'MGRU': GRUCell,
                      'LSTM': LSTMCell,
+                     'LSTMON': LSTMONCell,
                      'LSTMP': LSTMPCell}
         Cell = mode2cell[mode]
 
@@ -297,7 +352,7 @@ class RNNBase(Module):
     def forward(self, input, initial_states=None):
         if initial_states is None:
             zeros = Variable(torch.zeros(input.size(0), self.hidden_size))
-            if self.mode == 'LSTM':
+            if self.mode == 'LSTM' or self.mode == 'LSTMON':
                 initial_states = [(zeros, zeros), ] * self.num_layers
             elif self.mode == 'LSTMP':
                 zeros_h = Variable(torch.zeros(input.size(0), self.recurrent_size))
@@ -356,6 +411,12 @@ class LSTM(RNNBase):
 
     def __init__(self, *args, **kwargs):
         super(LSTM, self).__init__('LSTM', *args, **kwargs)
+
+
+class LSTMON(RNNBase):
+
+    def __init__(self, *args, **kwargs):
+        super(LSTMON, self).__init__('LSTMON', *args, **kwargs)
 
 
 class LSTMP(RNNBase):

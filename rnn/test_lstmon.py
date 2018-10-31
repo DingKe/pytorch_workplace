@@ -4,7 +4,7 @@ import torchvision.datasets as dsets
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 
-from modules import LSTMP
+from modules import LSTMON
 
 
 torch.manual_seed(1111)
@@ -13,7 +13,6 @@ torch.manual_seed(1111)
 sequence_length = 28
 input_size = 28
 hidden_size = 128
-recurrent_size = 64
 num_layers = 2
 num_classes = 10
 batch_size = 100
@@ -41,31 +40,28 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 
 # RNN Model (Many-to-One)
 class RNNModel(nn.Module):
-    def __init__(self, input_size, hidden_size, recurrent_size, num_layers, num_classes, bias=True, grad_clip=None):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=None):
         super(RNNModel, self).__init__()
         self.hidden_size = hidden_size
-        self.recurrent_size = recurrent_size
         self.num_layers = num_layers
 
-        self.rnn = LSTMP(input_size, hidden_size, recurrent_size, num_layers=num_layers, 
-                         bias=bias, return_sequences=False, grad_clip=grad_clip)
-        self.fc = nn.Linear(recurrent_size, num_classes, bias=bias)
+        self.rnn = LSTMON(input_size, hidden_size, num_layers=num_layers, 
+                        bias=bias, return_sequences=False, grad_clip=grad_clip)
+        self.fc = nn.Linear(hidden_size, num_classes, bias=bias)
     
     def forward(self, x):
         # Set initial states 
-        zeros_h = Variable(torch.zeros(x.size(0), self.recurrent_size))
-        zeros_c = Variable(torch.zeros(x.size(0), self.hidden_size))
-        initial_states = [(zeros_h, zeros_c)] * self.num_layers
+        zeros = Variable(torch.zeros(x.size(0), self.hidden_size))
+        initial_states = [(zeros, zeros)] * self.num_layers
         
         # Forward propagate RNN
-        #out = self.rnn(x, initial_states)  
-        out, _ = self.rnn(x, initial_states=None)  
+        out, _ = self.rnn(x, initial_states)  
         
         # Decode hidden state of last time step
         out = self.fc(out)  
         return out
 
-rnn = RNNModel(input_size, hidden_size, recurrent_size, num_layers, num_classes, bias=True, grad_clip=10)
+rnn = RNNModel(input_size, hidden_size, num_layers, num_classes, bias=True, grad_clip=10)
 
 
 # Loss and Optimizer
@@ -102,4 +98,4 @@ for images, labels in test_loader:
 print('Test Accuracy of the model on the 10000 test images: %d %%' % (100 * correct / total)) 
 
 # Save the Model
-torch.save(rnn.state_dict(), 'lstmp.pkl')
+torch.save(rnn.state_dict(), 'lstm.pkl')
